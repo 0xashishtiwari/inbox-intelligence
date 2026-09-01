@@ -1,159 +1,146 @@
-# Turborepo starter
+# Inbox Intelligence
 
-This Turborepo starter is maintained by the Turborepo core team.
+Inbox Intelligence is an AI-powered system that helps you search and understand your Gmail inbox using natural language.
 
-## Using this example
+The project connects to Gmail, syncs emails, stores and indexes them, and uses search and AI techniques to answer questions based on your emails.
 
-Run the following command:
+## Tech Stack
 
-```sh
-npx create-turbo@latest
+* Next.js
+* TypeScript
+* Node.js
+* Express
+* PostgreSQL
+* Drizzle ORM
+* Redis
+* BullMQ
+* pgvector
+* Gmail API
+* Google OAuth
+* LLMs and embeddings
+
+## Project Structure
+
+```text
+inbox-intelligence/
+├── apps/
+│   ├── web/          # Frontend
+│   └── api/          # Backend API
+│
+├── workers/
+│   ├── ingestion/    # Gmail data ingestion
+│   ├── sync/         # Incremental email synchronization
+│   └── ai/           # AI and embedding processing
+│
+├── packages/
+│   ├── db/           # Database and Drizzle
+│   ├── config/       # Shared configuration
+│   ├── validation/   # Validation schemas
+│   ├── retrieval/    # Search and retrieval
+│   ├── embeddings/   # Embedding logic
+│   ├── llm/          # LLM integrations
+│   ├── gmail/        # Gmail integration
+│   ├── queue/        # Background jobs
+│   ├── shared/       # Shared code
+│   └── evaluation/   # Evaluation tools
+│
+├── tests/
+├── infra/
+└── docs/
 ```
 
-## What's inside?
+## How It Works
 
-This Turborepo includes the following packages/apps:
+The basic flow is:
 
-### Apps and Packages
-
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `@next/eslint-plugin-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
-
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo build
+```text
+Gmail
+  ↓
+Sync
+  ↓
+PostgreSQL
+  ↓
+Search / Retrieval
+  ↓
+AI
+  ↓
+Answer with email references
 ```
 
-Without global `turbo`, use your package manager:
+The system will support both traditional keyword search and semantic search. These results will be combined to retrieve the most relevant emails before generating an answer.
 
-```sh
-cd my-turborepo
-npx turbo build
-pnpm exec turbo build
-pnpm exec turbo build
+## Running Locally
+
+Install dependencies:
+
+```bash
+pnpm install
 ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+Start PostgreSQL and Redis:
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo build --filter=docs
+```bash
+docker compose up -d
 ```
 
-Without global `turbo`:
+Start the development environment:
 
-```sh
-npx turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
+```bash
+pnpm dev
 ```
 
-### Develop
+## Environment Variables
 
-To develop all apps and packages, run the following command:
+Create a `.env` file in the project root.
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo dev
+```env
+DATABASE_URL=postgresql://inbox:inbox@localhost:5432/inbox_intelligence
+REDIS_URL=redis://localhost:6379
 ```
 
-Without global `turbo`, use your package manager:
+Additional environment variables will be added as Gmail OAuth and AI integrations are implemented.
 
-```sh
-cd my-turborepo
-npx turbo dev
-pnpm exec turbo dev
-pnpm exec turbo dev
+## Database
+
+The project uses PostgreSQL with Drizzle ORM.
+
+Generate migrations:
+
+```bash
+pnpm --filter db exec drizzle-kit generate
 ```
 
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+Apply migrations:
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo dev --filter=web
+```bash
+pnpm --filter db exec drizzle-kit migrate
 ```
 
-Without global `turbo`:
+## Current Status
 
-```sh
-npx turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-```
+The project is currently under development.
 
-### Remote Caching
+Completed:
 
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
+* Turborepo setup
+* pnpm workspace setup
+* Next.js application
+* Express API
+* PostgreSQL setup
+* Redis setup
+* Drizzle ORM setup
 
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
+Next:
 
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
+* Google OAuth
+* Gmail integration
+* Database schema
+* Email synchronization
+* Search and retrieval
+* Embeddings
+* RAG pipeline
+* Frontend integration
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
+## Goal
 
-```sh
-cd my-turborepo
-turbo login
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo login
-pnpm exec turbo login
-pnpm exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo link
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo link
-pnpm exec turbo link
-pnpm exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+The goal of Inbox Intelligence is to build a practical and scalable system for searching and interacting with email data, while exploring backend architecture, asynchronous processing, information retrieval, and RAG.
