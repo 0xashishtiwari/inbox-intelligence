@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import "dotenv/config";
-
+import authRouter from "./routes/auth.routes.js";
 
 
 const app = express();
@@ -15,7 +15,7 @@ app.use(cors({
     allowedHeaders: ["Content-Type", "Authorization"],
 }));
 
-
+app.use("/auth", authRouter);
 
 app.get("/health", (req, res) => {
     res.status(200).json({ status: "ok" });
