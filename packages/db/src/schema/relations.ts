@@ -1,9 +1,9 @@
 import { relations } from 'drizzle-orm'
 
 
-import { mailboxes } from './mailboxes'
-import { oAuthAccounts } from './oAuthAccount'
-import { users } from './users'
+import { mailboxes } from './mailboxes.js'
+import { oAuthAccounts } from './oAuthAccount.js'
+import { users } from './users.js'
 
 
 

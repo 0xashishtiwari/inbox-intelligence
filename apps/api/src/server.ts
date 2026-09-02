@@ -3,27 +3,40 @@ import cors from "cors";
 import "dotenv/config";
 import authRouter from "./routes/auth.routes.js";
 import { checkDatabaseConnection } from "@repo/db";
-
-
-const app = express();
+import meRoutes from "./routes/me.routes.js";
+import cookieParser from "cookie-parser";
+import {httpLogger} from "./middleware/logger.js";
+import { errorHandler } from "./middleware/error.middleware.js";
+import { logger } from "./config/logger.js";
+const app = express(); 
 
 app.use(express.json());
+app.use(cookieParser());
+app.use(httpLogger);
+
+
+app.use(cors({
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true
+}));
+
+
 
 app.get('/health', async (req, res) => {
     try {
         await checkDatabaseConnection();
         res.status(200).json({ status: "ok", database: "connected" });
     } catch (error) {
-        console.error("Database health check failed:", error);
+        req.log.error({ err: error }, "Database connection error");
         res.status(503).json({ status: "error", database: "disconnected" });
     }
 });
 
-app.use(cors({
-    origin: "*",
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-}));
+app.use("/api", meRoutes);
+
+
 
 app.use("/auth", authRouter);
 
@@ -31,9 +44,18 @@ app.get("/health", (req, res) => {
     res.status(200).json({ status: "ok" });
 });
 
+// Route not found
+app.use((_, res) => {
+    res.status(404).json({ error: "Route not found" });
+});
+
+
+
+app.use(errorHandler);
+
 const PORT = process.env.PORT || 4000;
 
 app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-    console.log(`Health check endpoint: http://localhost:${PORT}/health`);
+    logger.info(`Server is running on port ${PORT}`);
+    logger.info(`Health check endpoint: http://localhost:${PORT}/health`);
 });

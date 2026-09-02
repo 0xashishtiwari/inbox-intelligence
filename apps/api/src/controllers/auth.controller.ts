@@ -109,9 +109,16 @@ export const googleCallback = async (
     const accessToken = createAccessToken(user.id, user.email);
 
 
+
+    res.cookie("access_token", accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
     return res.status(200).json({
       message: "Google OAuth successful",
-      accessToken,
       user: {
         id: user.id,
         email: user.email,

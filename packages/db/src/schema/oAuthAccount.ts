@@ -1,7 +1,7 @@
 import { pgTable, uuid, text, timestamp } from "drizzle-orm/pg-core";
 
 
-import { mailboxes } from "./mailboxes";
+import { mailboxes } from "./mailboxes.js";
 
 
 export const oAuthAccounts = pgTable("oauth_accounts", {
