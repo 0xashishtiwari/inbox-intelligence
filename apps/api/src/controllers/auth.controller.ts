@@ -5,7 +5,7 @@ import { googleOAuthClient } from "../config/google.js";
 import { db, users, mailboxes, oAuthAccounts } from '@repo/db';
 import { eq } from "drizzle-orm";
 import { encrypt } from "../utils/encryption.js";
-
+import { createAccessToken } from "../utils/jwt.js";
 
 const GOOGLE_SCOPES = [
   "openid",
@@ -96,7 +96,7 @@ export const googleCallback = async (
         scope: tokens.scope || "",
       }).returning();
       oAuthAccount = createdOAuthAccount;
-    }else{
+    } else {
       const [updatedOAuthAccount] = await db.update(oAuthAccounts).set({
         accessToken: encrypt(tokens.access_token || ""),
         refreshToken: tokens.refresh_token ? encrypt(tokens.refresh_token || "") : null,
@@ -106,22 +106,25 @@ export const googleCallback = async (
     }
 
 
-    const gmail = google.gmail({
-      version: "v1",
-      auth: googleOAuthClient,
-    });
+    const accessToken = createAccessToken(user.id, user.email);
 
-    const profile = await gmail.users.getProfile({
-      userId: "me",
-    });
 
-    return res.json({
+    return res.status(200).json({
       message: "Google OAuth successful",
-      user,
-      mailbox,
-      oAuthAccount,
-      profile: profile.data,
+      accessToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+      },
+      mailbox: {
+        id: mailbox.id,
+        email: mailbox.email,
+        provider: mailbox.provider,
+      },
     });
+
+
   } catch (error) {
     console.error("Google OAuth callback failed:", error);
 

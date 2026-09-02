@@ -12,9 +12,9 @@ const IV_LENGTH = 12; // AES-GCM standard IV length
 const AUTH_TAG_LENGTH = 16; // AES-GCM standard authentication tag length
 
 function generateKey(): Buffer {
-    const key = process.env.ENCRYPTION_KEY;
+    const key = process.env.AES_GCM_256_ENCRYPTION_KEY;
     if (!key) {
-        throw new Error('ENCRYPTION_KEY environment variable is not set');
+        throw new Error('AES_GCM_256_ENCRYPTION_KEY environment variable is not set');
     }
 
     const keyBuffer = Buffer.from(key, 'base64');
