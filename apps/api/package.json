@@ -26,6 +26,7 @@
   },
   "dependencies": {
     "express-session": "^1.19.0",
-    "googleapis": "^176.0.0"
+    "googleapis": "^176.0.0",
+    "@repo/db": "workspace:*"
   }
 }

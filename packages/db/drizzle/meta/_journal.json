@@ -8,6 +8,20 @@
       "when": 1788282901137,
       "tag": "0000_open_saracen",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788319471732,
+      "tag": "0001_acoustic_doorman",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788319528004,
+      "tag": "0002_sloppy_doctor_spectrum",
+      "breakpoints": true
     }
   ]
 }

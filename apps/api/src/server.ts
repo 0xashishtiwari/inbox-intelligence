@@ -2,12 +2,22 @@ import express from "express";
 import cors from "cors";
 import "dotenv/config";
 import authRouter from "./routes/auth.routes.js";
+import { checkDatabaseConnection } from "@repo/db";
 
 
 const app = express();
 
 app.use(express.json());
 
+app.get('/health', async (req, res) => {
+    try {
+        await checkDatabaseConnection();
+        res.status(200).json({ status: "ok", database: "connected" });
+    } catch (error) {
+        console.error("Database health check failed:", error);
+        res.status(503).json({ status: "error", database: "disconnected" });
+    }
+});
 
 app.use(cors({
     origin: "*",
