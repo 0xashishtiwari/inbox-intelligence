@@ -23,6 +23,9 @@ importers:
       '@repo/db':
         specifier: workspace:*
         version: link:../../packages/db
+      drizzle-orm:
+        specifier: ^0.45.2
+        version: 0.45.2(@types/pg@8.23.1)(pg@8.23.0)(postgres@3.4.9)
       express-session:
         specifier: ^1.19.0
         version: 1.19.0(supports-color@7.2.0)
