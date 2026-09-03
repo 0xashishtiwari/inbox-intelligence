@@ -1,9 +1,21 @@
 import {encrypt, decrypt} from './encryption.js';
 
-const testString = 'Hello, World!';
 
-console.log('Original:', testString);
-const encrypted = encrypt(testString);
-console.log('Encrypted:', encrypted);
-const decrypted = decrypt(encrypted);
-console.log('Decrypted:', decrypted);
+const testEncryption = () => {
+    const originalText = 'Hello, World!';
+    const encryptedText = encrypt(originalText);
+    const decryptedText = decrypt(encryptedText);
+
+    console.log('Original Text:', originalText);
+    console.log('Encrypted Text:', encryptedText);
+    console.log('Decrypted Text:', decryptedText);
+
+
+    if (originalText === decryptedText) {
+        console.log('Encryption and decryption are working correctly.');
+    }
+
+
+}
+
+testEncryption();

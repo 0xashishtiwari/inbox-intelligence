@@ -8,6 +8,8 @@ import cookieParser from "cookie-parser";
 import {httpLogger} from "./middleware/logger.js";
 import { errorHandler } from "./middleware/error.middleware.js";
 import { logger } from "./config/logger.js";
+import gmailRouter from "./routes/gmail.routes.js";
+
 const app = express(); 
 
 app.use(express.json());
@@ -35,7 +37,7 @@ app.get('/health', async (req, res) => {
 });
 
 app.use("/api", meRoutes);
-
+app.use("/api", gmailRouter);
 
 
 app.use("/auth", authRouter);

@@ -5,17 +5,17 @@ import type { Request, Response, NextFunction } from "express";
 import { getJwtSecret } from "../utils/jwt.js";
 
 interface JwtPayload {
-  userId: string;
-  email: string;
+    userId: string;
+    email: string;
 }
 
-export interface AuthenticatedRequest extends Request {
+export interface AuthenticatedRequest<P extends Record<string, string>> extends Request<P> {
     user?: JwtPayload;
 }
 
 export function requireAuth(req: AuthenticatedRequest, res: Response, next: NextFunction) {
 
-    try{
+    try {
         const token = req.cookies.access_token;
 
         if (!token) {
@@ -26,7 +26,7 @@ export function requireAuth(req: AuthenticatedRequest, res: Response, next: Next
 
         const decoded = jwt.verify(token, secret) as JwtPayload;
 
-        if(typeof decoded !== 'object' || !decoded.userId || !decoded.email) {
+        if (typeof decoded !== 'object' || !decoded.userId || !decoded.email) {
             return res.status(401).json({ error: "Unauthorized" });
         }
 
@@ -34,7 +34,7 @@ export function requireAuth(req: AuthenticatedRequest, res: Response, next: Next
 
         next();
 
-    }catch(err) {
+    } catch (err) {
         console.error("Error in requireAuth middleware:", err);
         return res.status(401).json({ error: "Unauthorized" });
     }
