@@ -1,11 +1,20 @@
 import type {gmail_v1} from 'googleapis';
 
-export async function listMessages(gmail: gmail_v1.Gmail , maxResults: number = 10): Promise<gmail_v1.Schema$Message[]> {
+export interface ListMessagesResult {
+    messages: gmail_v1.Schema$Message[];
+    nextPageToken?: string;
+}
+
+export async function listMessages(gmail: gmail_v1.Gmail , maxResults: number = 100 , PageToken?: string): Promise<ListMessagesResult> {
     const response = await gmail.users.messages.list({
         userId: 'me',
-        maxResults
+        maxResults,
+        pageToken: PageToken
     });
-    return response.data.messages || [];
+    return {
+        messages: response.data.messages || [],
+        nextPageToken: response.data.nextPageToken ?? undefined
+    };
 }
 
 export async function getMessage(gmail: gmail_v1.Gmail , messageId: string): Promise<gmail_v1.Schema$Message> {

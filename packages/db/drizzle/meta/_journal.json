@@ -5,22 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1788282901137,
-      "tag": "0000_open_saracen",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1788319471732,
-      "tag": "0001_acoustic_doorman",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1788319528004,
-      "tag": "0002_sloppy_doctor_spectrum",
+      "when": 1788505275324,
+      "tag": "0000_rapid_george_stacy",
       "breakpoints": true
     }
   ]
