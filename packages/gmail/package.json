@@ -14,7 +14,12 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "@repo/db": "workspace:*",
     "dotenv": "^17.4.2",
+    "drizzle-orm": "^0.45.2",
     "googleapis": "^176.0.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.13"
   }
 }

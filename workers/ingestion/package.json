@@ -1,0 +1,20 @@
+{
+  "name": "@repo/ingestion",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/worker.ts",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@repo/db": "workspace:*",
+    "@repo/gmail": "workspace:*",
+    "bullmq": "^6.3.4",
+    "ioredis": "^6.0.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.13",
+    "typescript": "^7.0.2"
+  }
+}
