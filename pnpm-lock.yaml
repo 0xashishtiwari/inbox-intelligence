@@ -152,6 +152,8 @@ importers:
         specifier: 7.0.2
         version: 7.0.2
 
+  packages/crypto: {}
+
   packages/db:
     dependencies:
       dotenv:
@@ -270,6 +272,9 @@ importers:
 
   workers/ingestion:
     dependencies:
+      '@repo/crypto':
+        specifier: workspace:*
+        version: link:../../packages/crypto
       '@repo/db':
         specifier: workspace:*
         version: link:../../packages/db
@@ -279,6 +284,9 @@ importers:
       bullmq:
         specifier: ^6.3.4
         version: 6.3.4(ioredis@6.0.0(supports-color@7.2.0))(pg@8.23.0)
+      drizzle-orm:
+        specifier: ^0.45.2
+        version: 0.45.2(@types/pg@8.23.1)(pg@8.23.0)(postgres@3.4.9)
       ioredis:
         specifier: ^6.0.0
         version: 6.0.0(supports-color@7.2.0)

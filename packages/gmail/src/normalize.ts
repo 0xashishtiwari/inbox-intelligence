@@ -33,10 +33,11 @@ function getHeader(headers: gmail_v1.Schema$MessagePartHeader[] = [], name: stri
 function decodeBase64Url(data?: string): string {
     if (!data) return '';
 
-    const normalized = data.replace(/-/g, '+').replace(/-/g, '/');
+    const normalized = data
+        .replace(/-/g, '+')
+        .replace(/_/g, '/');
 
     return Buffer.from(normalized, 'base64').toString('utf-8');
-
 }
 
 

@@ -10,7 +10,9 @@
   "dependencies": {
     "@repo/db": "workspace:*",
     "@repo/gmail": "workspace:*",
+    "@repo/crypto": "workspace:*",
     "bullmq": "^6.3.4",
+    "drizzle-orm": "^0.45.2",
     "ioredis": "^6.0.0"
   },
   "devDependencies": {
