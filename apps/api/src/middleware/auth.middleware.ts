@@ -13,7 +13,7 @@ export interface AuthenticatedRequest<P extends Record<string, string>> extends 
     user?: JwtPayload;
 }
 
-export function requireAuth(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+export function requireAuth(req: AuthenticatedRequest<Record<string, string>>, res: Response, next: NextFunction) {
 
     try {
         const token = req.cookies.access_token;
