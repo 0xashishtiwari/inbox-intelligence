@@ -1,22 +1,23 @@
-{
-  "name": "@repo/ingestion",
-  "version": "1.0.0",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "dev": "tsx src/worker.ts",
-    "build": "tsc"
-  },
-  "dependencies": {
-    "@repo/db": "workspace:*",
-    "@repo/gmail": "workspace:*",
-    "@repo/crypto": "workspace:*",
-    "bullmq": "^6.3.4",
-    "drizzle-orm": "^0.45.2",
-    "ioredis": "^6.0.0"
-  },
-  "devDependencies": {
-    "tsx": "^4.23.13",
-    "typescript": "^7.0.2"
+  {
+    "name": "@repo/ingestion",
+    "version": "1.0.0",
+    "private": true,
+    "type": "module",
+    "scripts": {
+      "dev": "tsx src/worker.ts",
+      "build": "tsc"
+    },
+    "dependencies": {
+      "@repo/db": "workspace:*",
+      "@repo/gmail": "workspace:*",
+      "@repo/crypto": "workspace:*",
+      "@repo/queue": "workspace:*",
+      "bullmq": "^6.3.4",
+      "drizzle-orm": "^0.45.2",
+      "ioredis": "^6.0.0"
+    },
+    "devDependencies": {
+      "tsx": "^4.23.13",
+      "typescript": "^7.0.2"
+    }
   }
-}

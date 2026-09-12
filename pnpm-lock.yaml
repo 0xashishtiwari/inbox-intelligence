@@ -237,6 +237,16 @@ importers:
         specifier: ^4.23.13
         version: 4.23.13
 
+  packages/queue:
+    dependencies:
+      bullmq:
+        specifier: 6.3.4
+        version: 6.3.4(ioredis@6.0.0(supports-color@7.2.0))(pg@8.23.0)
+    devDependencies:
+      tsx:
+        specifier: ^4.23.13
+        version: 4.23.13
+
   packages/typescript-config: {}
 
   packages/ui:
@@ -281,6 +291,9 @@ importers:
       '@repo/gmail':
         specifier: workspace:*
         version: link:../../packages/gmail
+      '@repo/queue':
+        specifier: workspace:*
+        version: link:../../packages/queue
       bullmq:
         specifier: ^6.3.4
         version: 6.3.4(ioredis@6.0.0(supports-color@7.2.0))(pg@8.23.0)

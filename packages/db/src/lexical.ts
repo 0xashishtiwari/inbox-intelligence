@@ -11,9 +11,10 @@ type LexicalSearchOptions = {
     startDate?: Date;
     endDate?: Date;
     limit?: number;
+    offset?: number;
 }
 
-export async function searchLexical({ mailboxId, threadId, query, sender, startDate, endDate, limit = 20 }: LexicalSearchOptions) {
+export async function searchLexical({ mailboxId, threadId, query, sender, startDate, endDate, limit = 20, offset = 0 }: LexicalSearchOptions) {
 
     const searchVector = sql`
     setweight(
@@ -82,6 +83,7 @@ export async function searchLexical({ mailboxId, threadId, query, sender, startD
         .from(messages)
         .where(and(...conditions))
         .orderBy(desc(score))
+        .offset(offset)
         .limit(limit);
 
     return results;

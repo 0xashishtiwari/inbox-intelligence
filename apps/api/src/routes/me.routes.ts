@@ -4,7 +4,7 @@ import { requireAuth , type AuthenticatedRequest } from '../middleware/auth.midd
 
 const router = Router();
 
-router.get('/me', requireAuth, (req: AuthenticatedRequest, res) => {
+router.get('/me', requireAuth, (req: AuthenticatedRequest<{}>, res) => {
     if (!req.user) {
         return res.status(401).json({ error: "Unauthorized" });
     }

@@ -1,40 +1,43 @@
-import { Worker } from 'bullmq'
+import {Worker } from 'bullmq';
+import {ingestMailbox} from './ingestion.service.js';
+import {redisConnection} from '@repo/queue';
 
-const worker = new Worker('gmail-ingestion', async (job) => {
-    console.log('Processing job:', job.id, 'with data:', job.data);
+const worker =  new Worker('gmail-ingestion' , async(job)=>{
 
+    console.log(`[worker] Processing job ${job.id} of type ${job.name}`);
+    
+    const {mailboxId , maxMessages} = job.data;
 
-    const {mailBoxId } = job.data;
-
-    if(!mailBoxId) {
-        throw new Error('mailBoxId is required in job data');
+    if(!mailboxId){
+        throw new Error('Missing mailboxId in job data');
     }
 
-    // Here you would call the ingestMailbox function to process the mailbox
-    // await ingestMailbox(mailBoxId, 100); // Assuming a default maxMessages of 100 for this example
 
-    return {
-        success: true,
-        message: `Job ${job.id} processed successfully.`
-    }
+    await job.updateProgress(10);
+    await ingestMailbox(mailboxId, maxMessages);
 
-},
-    {
-        connection: {
-            host: 'localhost',
-            port: 6379
-        }
-    }
+    await job.updateProgress(100);
 
-);
+    return { success: true, mailboxId , maxMessages };  
 
+}, {
+    connection : redisConnection,
 
-worker.on('completed' , (job)=>{
-    console.log(`Job ${job.id} completed successfully.`);
+    // Optional: Set concurrency to control how many jobs can be processed in parallel
+    concurrency: 1
 })
 
-worker.on('failed' , (job, err)=>{
-    console.error(`Job ${job?.id} failed with error:`, err);
-});
 
-console.log('Gmail ingestion worker is running and listening for jobs...');
+worker.on('completed', (job , result) => {
+    console.log(`[worker] Job ${job.id} completed successfully.`, result);
+})
+
+worker.on('failed', (job , err) => {
+    console.error(`[worker] Job ${job?.id} failed with error:`, err);
+}) 
+
+worker.on('error', (err) => {
+    console.error(`[worker] Worker encountered an error:`, err);
+})
+
+console.log('[worker] Gmail ingestion is running and waiting for jobs...');
