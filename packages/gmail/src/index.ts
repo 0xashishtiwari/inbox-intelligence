@@ -3,3 +3,4 @@ export {listMessages, getMessage} from './messages.js';
 export {listThreads, getThread} from './threads.js';
 export {normalizeGmailMessage} from './normalize.js';
 export {fetchMessageIdBatches} from './fetch.js';
+export {listHistory} from './history.js';

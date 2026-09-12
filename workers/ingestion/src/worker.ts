@@ -14,7 +14,7 @@ const worker =  new Worker('gmail-ingestion' , async(job)=>{
 
 
     await job.updateProgress(10);
-    await ingestMailbox(mailboxId, maxMessages);
+    await ingestMailbox(mailboxId);
 
     await job.updateProgress(100);
 

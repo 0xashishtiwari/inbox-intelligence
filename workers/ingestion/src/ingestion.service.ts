@@ -2,109 +2,502 @@ import {
     createGmailClient,
     fetchMessageIdBatches,
     getMessage,
-    normalizeGmailMessage
+    normalizeGmailMessage,
+    getProfile,
+    listHistory
 } from '@repo/gmail';
 
 import { eq, and, inArray } from 'drizzle-orm';
 
 import { decrypt } from '@repo/crypto';
 
-import { db, mailboxes, oAuthAccounts, threads, messages } from '@repo/db';
+import {
+    db,
+    mailboxes,
+    oAuthAccounts,
+    threads,
+    messages
+} from '@repo/db';
 
-export async function ingestMailbox(mailBoxId: string, maxMessages: number) {
+export async function ingestMailbox(
+    mailBoxId: string,
+    maxMessages?: number
+) {
+    console.log(
+        `Starting ingestion for mailbox: ${mailBoxId} with maxMessages: ${maxMessages}`
+    );
 
-    console.log(`Starting ingestion for mailbox: ${mailBoxId} with maxMessages: ${maxMessages}`);
-
-    // find the mailbox in the database
-
-    const mailbox = await db.select().from(mailboxes).where(eq(mailboxes.id, mailBoxId));
-
+    // Find mailbox
+    const mailbox = await db
+        .select()
+        .from(mailboxes)
+        .where(eq(mailboxes.id, mailBoxId));
 
     if (mailbox.length === 0) {
         throw new Error(`Mailbox with id ${mailBoxId} not found`);
     }
 
+    const currentMailbox = mailbox[0];
 
-    console.log(`Found mailbox: ${mailbox[0].provider} with id: ${mailbox[0].id}`);
+    console.log(
+        `Found mailbox: ${currentMailbox.provider} with id: ${currentMailbox.id}`
+    );
 
-    // find the associated OAuth account
-    const oAuthAccount = await db.select().from(oAuthAccounts).where(eq(oAuthAccounts.mailboxId, mailBoxId));
+    // Find associated OAuth account
+    const oAuthAccount = await db
+        .select()
+        .from(oAuthAccounts)
+        .where(eq(oAuthAccounts.mailboxId, mailBoxId));
 
     if (oAuthAccount.length === 0) {
-        throw new Error(`OAuth account for mailbox with id ${mailBoxId} not found`);
+        throw new Error(
+            `OAuth account for mailbox with id ${mailBoxId} not found`
+        );
     }
 
-    console.log(`Found OAuth account: ${oAuthAccount[0].provider} with id: ${oAuthAccount[0].id}`);
+    console.log(
+        `Found OAuth account: ${oAuthAccount[0].provider} with id: ${oAuthAccount[0].id}`
+    );
 
-    // create a Gmail client using the OAuth account
-
+    // Create Gmail client
     const accessToken = decrypt(oAuthAccount[0].accessToken);
-    const refreshToken = oAuthAccount[0].refreshToken ? decrypt(oAuthAccount[0].refreshToken) : undefined;
 
-    const gmailClient = createGmailClient(accessToken, refreshToken as string);
+    const refreshToken = oAuthAccount[0].refreshToken
+        ? decrypt(oAuthAccount[0].refreshToken)
+        : undefined;
 
-    for await (const messageIds of fetchMessageIdBatches(gmailClient, maxMessages)) {
+    const gmailClient = createGmailClient(
+        accessToken,
+        refreshToken as string
+    );
 
+    // Get current Gmail profile
+    const profile = await getProfile(gmailClient);
 
-        console.log(`Fetched ${messageIds.length} message IDs, processing...`);
+    const currentHistoryId = profile.historyId;
 
-        const existingMessages = await db.select({ providerMessageId: messages.providerMessageId }).from(messages).where(
-            and(
-                eq(messages.mailboxId, mailBoxId),
-                inArray(messages.providerMessageId, messageIds)
+    console.log(`Current Gmail historyId: ${currentHistoryId}`);
+
+    const storedHistoryId = currentMailbox.historyId;
+
+    console.log(
+        `Stored historyId in database: ${storedHistoryId}`
+    );
+
+    /*
+     * ============================================================
+     * INITIAL SYNC
+     * ============================================================
+     */
+
+    if (!storedHistoryId) {
+        console.log(
+            'No stored history ID. Performing initial sync.'
+        );
+
+        for await (const messageIds of fetchMessageIdBatches(
+            gmailClient,
+            maxMessages
+        )) {
+            console.log(
+                `Fetched ${messageIds.length} message IDs, processing...`
+            );
+
+            const existingMessages = await db
+                .select({
+                    providerMessageId: messages.providerMessageId
+                })
+                .from(messages)
+                .where(
+                    and(
+                        eq(messages.mailboxId, mailBoxId),
+                        inArray(
+                            messages.providerMessageId,
+                            messageIds
+                        )
+                    )
+                );
+
+            const existingMessageIds = new Set(
+                existingMessages.map(
+                    (msg) => msg.providerMessageId
+                )
+            );
+
+            const newMessageIds = messageIds.filter(
+                (id) => !existingMessageIds.has(id)
+            );
+
+            console.log(
+                `Found ${newMessageIds.length} new messages to process.`
+            );
+
+            const gmailMessages = [];
+
+            // Download messages with concurrency = 2
+            for (let i = 0; i < newMessageIds.length; i += 2) {
+                const currentIds = newMessageIds.slice(i, i + 2);
+
+                const downloadingMessages = await Promise.all(
+                    currentIds.map((id) =>
+                        getMessage(gmailClient, id)
+                    )
+                );
+
+                gmailMessages.push(...downloadingMessages);
+            }
+
+            console.log(
+                `Downloaded ${gmailMessages.length} new messages, normalizing and saving to database...`
+            );
+
+            // Save messages
+            for (const gmailMessage of gmailMessages) {
+                try {
+                    const normalizedMessage =
+                        normalizeGmailMessage(gmailMessage);
+
+                    console.log(
+                        `Processing message with id: ${normalizedMessage.providerMessageId} and subject: ${normalizedMessage.subject}`
+                    );
+
+                    // Find existing thread
+                    let thread =
+                        await db.query.threads.findFirst({
+                            where: and(
+                                eq(
+                                    threads.mailboxId,
+                                    mailBoxId
+                                ),
+                                eq(
+                                    threads.providerThreadId,
+                                    normalizedMessage.providerThreadId
+                                )
+                            )
+                        });
+
+                    // Create thread if it doesn't exist
+                    if (!thread) {
+                        const [createdThread] =
+                            await db
+                                .insert(threads)
+                                .values({
+                                    mailboxId: mailBoxId,
+
+                                    providerThreadId:
+                                        normalizedMessage.providerThreadId,
+
+                                    subject:
+                                        normalizedMessage.subject
+                                })
+                                .returning();
+
+                        thread = createdThread;
+                    }
+
+                    // Insert/update message
+                    await db
+                        .insert(messages)
+                        .values({
+                            mailboxId: mailBoxId,
+
+                            threadId: thread.id,
+
+                            providerMessageId:
+                                normalizedMessage.providerMessageId,
+
+                            providerThreadId:
+                                normalizedMessage.providerThreadId,
+
+                            subject:
+                                normalizedMessage.subject,
+
+                            sender:
+                                normalizedMessage.sender,
+
+                            recipients:
+                                normalizedMessage.recipients.join(
+                                    ', '
+                                ),
+
+                            timestamp:
+                                normalizedMessage.timestamp,
+
+                            bodyText:
+                                normalizedMessage.bodyText,
+
+                            bodyHtml:
+                                normalizedMessage.bodyHtml,
+
+                            labels:
+                                normalizedMessage.labels?.join(
+                                    ', '
+                                ),
+
+                            snippet:
+                                normalizedMessage.snippet
+                        })
+                        .onConflictDoUpdate({
+                            target: [
+                                messages.mailboxId,
+                                messages.providerMessageId
+                            ],
+
+                            set: {
+                                threadId: thread.id,
+
+                                providerThreadId:
+                                    normalizedMessage.providerThreadId,
+
+                                subject:
+                                    normalizedMessage.subject,
+
+                                sender:
+                                    normalizedMessage.sender,
+
+                                recipients:
+                                    normalizedMessage.recipients.join(
+                                        ', '
+                                    ),
+
+                                timestamp:
+                                    normalizedMessage.timestamp,
+
+                                bodyText:
+                                    normalizedMessage.bodyText,
+
+                                bodyHtml:
+                                    normalizedMessage.bodyHtml,
+
+                                labels:
+                                    normalizedMessage.labels?.join(
+                                        ', '
+                                    ),
+
+                                snippet:
+                                    normalizedMessage.snippet,
+
+                                updatedAt: new Date()
+                            }
+                        });
+
+                    console.log(
+                        `Saved message: ${normalizedMessage.providerMessageId}`
+                    );
+                } catch (error) {
+                    console.error(
+                        'Failed to process Gmail message',
+                        error
+                    );
+
+                    continue;
+                }
+            }
+        }
+
+        /*
+         * Save Gmail history ID after initial sync.
+         */
+        if (currentHistoryId) {
+            await db
+                .update(mailboxes)
+                .set({
+                    historyId: currentHistoryId,
+                    syncStatus: 'completed',
+                    updatedAt: new Date()
+                })
+                .where(eq(mailboxes.id, mailBoxId));
+
+            console.log(
+                `Initial sync completed. Saved historyId: ${currentHistoryId}`
+            );
+        }
+
+        return;
+    }
+
+    /*
+     * ============================================================
+     * INCREMENTAL SYNC
+     * ============================================================
+     */
+
+    console.log(
+        `Performing incremental sync from historyId: ${storedHistoryId}`
+    );
+
+    const changedMessageIds = new Set<string>();
+    const deletedMessageIds = new Set<string>();
+
+    let nextPageToken: string | undefined = undefined;
+    let latestHistoryId: string | undefined;
+
+    do {
+        const historyResult = await listHistory(
+            gmailClient,
+            storedHistoryId,
+            nextPageToken
+        );
+
+        console.log(
+            `Fetched ${historyResult.history.length} history records`
+        );
+
+        /*
+         * New messages
+         */
+        for (const history of historyResult.history) {
+            for (const added of history.messagesAdded ?? []) {
+                const messageId = added.message?.id;
+
+                if (messageId) {
+                    changedMessageIds.add(messageId);
+                }
+            }
+
+            /*
+             * Label changes mean the message changed.
+             * We fetch the latest version from Gmail.
+             */
+            for (const added of history.labelsAdded ?? []) {
+                const messageId = added.message?.id;
+
+                if (messageId) {
+                    changedMessageIds.add(messageId);
+                }
+            }
+
+            for (const removed of history.labelsRemoved ?? []) {
+                const messageId = removed.message?.id;
+
+                if (messageId) {
+                    changedMessageIds.add(messageId);
+                }
+            }
+
+            /*
+             * Deleted messages
+             */
+            for (const deleted of history.messagesDeleted ?? []) {
+                const messageId = deleted.message?.id;
+
+                if (messageId) {
+                    deletedMessageIds.add(messageId);
+                }
+            }
+        }
+
+        /*
+         * Gmail returns the latest history ID.
+         */
+        if (historyResult.historyId) {
+            latestHistoryId = historyResult.historyId;
+        }
+
+        nextPageToken = historyResult.nextPageToken;
+
+    } while (nextPageToken);
+
+    console.log(
+        `Found ${changedMessageIds.size} changed messages`
+    );
+
+    console.log(
+        `Found ${deletedMessageIds.size} deleted messages`
+    );
+
+    /*
+     * ============================================================
+     * DELETE REMOVED MESSAGES
+     * ============================================================
+     */
+
+    if (deletedMessageIds.size > 0) {
+        await db
+            .delete(messages)
+            .where(
+                and(
+                    eq(messages.mailboxId, mailBoxId),
+                    inArray(
+                        messages.providerMessageId,
+                        [...deletedMessageIds]
+                    )
+                )
+            );
+
+        console.log(
+            `Deleted ${deletedMessageIds.size} messages from database`
+        );
+    }
+
+    /*
+     * ============================================================
+     * FETCH CHANGED MESSAGES
+     * ============================================================
+     */
+
+    const messageIdsToFetch = [
+        ...changedMessageIds
+    ].filter(
+        (id) => !deletedMessageIds.has(id)
+    );
+
+    for (let i = 0; i < messageIdsToFetch.length; i += 2) {
+        const currentIds = messageIdsToFetch.slice(i, i + 2);
+
+        const gmailMessages = await Promise.all(
+            currentIds.map((id) =>
+                getMessage(gmailClient, id)
             )
         );
 
-        const existingMessageIds = new Set(existingMessages.map(msg => msg.providerMessageId));
-
-        const newMessageIds = messageIds.filter(id => !existingMessageIds.has(id));
-
-        console.log(`Found ${newMessageIds.length} new messages to process.`);
-
-
-        const gmailMessages = [];
-
-        for (let i = 0; i < newMessageIds.length; i += 2) {
-            const currentIds = newMessageIds.slice(i, i + 2);
-
-            const downloadingMessages = await Promise.all(currentIds.map((id) => getMessage(gmailClient, id)));
-
-            gmailMessages.push(...downloadingMessages);
-        }
-
-        console.log(`Downloaded ${gmailMessages.length} new messages, normalizing and saving to database...`);
-
-        // process each message and insert into the databases
-
         for (const gmailMessage of gmailMessages) {
             try {
-                const normalizedMessage = normalizeGmailMessage(gmailMessage);
+                const normalizedMessage =
+                    normalizeGmailMessage(gmailMessage);
 
-                console.log(`Processing message with id: ${normalizedMessage.providerMessageId} and subject: ${normalizedMessage.subject}`);
+                console.log(
+                    `Processing changed message: ${normalizedMessage.providerMessageId}`
+                );
 
-                // check if the thread already exists in the database
-                let thread = await db.query.threads.findFirst({
-                    where: and(
-                        eq(threads.mailboxId, mailBoxId),
-                        eq(threads.providerThreadId, normalizedMessage.providerThreadId)
-                    )
-                })
-
+                /*
+                 * Find/create thread
+                 */
+                let thread =
+                    await db.query.threads.findFirst({
+                        where: and(
+                            eq(
+                                threads.mailboxId,
+                                mailBoxId
+                            ),
+                            eq(
+                                threads.providerThreadId,
+                                normalizedMessage.providerThreadId
+                            )
+                        )
+                    });
 
                 if (!thread) {
-                    const [createdThread] = await db.insert(threads).values({
-                        mailboxId: mailBoxId,
-                        providerThreadId: normalizedMessage.providerThreadId,
-                        subject: normalizedMessage.subject
-                    }).returning();
+                    const [createdThread] =
+                        await db
+                            .insert(threads)
+                            .values({
+                                mailboxId: mailBoxId,
+
+                                providerThreadId:
+                                    normalizedMessage.providerThreadId,
+
+                                subject:
+                                    normalizedMessage.subject
+                            })
+                            .returning();
 
                     thread = createdThread;
-
                 }
 
-
-                // insert/update the message in the database
-
+                /*
+                 * Upsert changed message
+                 */
                 await db
                     .insert(messages)
                     .values({
@@ -118,28 +511,38 @@ export async function ingestMailbox(mailBoxId: string, maxMessages: number) {
                         providerThreadId:
                             normalizedMessage.providerThreadId,
 
-                        subject: normalizedMessage.subject,
+                        subject:
+                            normalizedMessage.subject,
 
-                        sender: normalizedMessage.sender,
+                        sender:
+                            normalizedMessage.sender,
 
                         recipients:
-                            normalizedMessage.recipients.join(", "),
+                            normalizedMessage.recipients.join(
+                                ', '
+                            ),
 
-                        timestamp: normalizedMessage.timestamp,
+                        timestamp:
+                            normalizedMessage.timestamp,
 
-                        bodyText: normalizedMessage.bodyText,
+                        bodyText:
+                            normalizedMessage.bodyText,
 
-                        bodyHtml: normalizedMessage.bodyHtml,
+                        bodyHtml:
+                            normalizedMessage.bodyHtml,
 
                         labels:
-                            normalizedMessage.labels?.join(", "),
+                            normalizedMessage.labels?.join(
+                                ', '
+                            ),
 
-                        snippet: normalizedMessage.snippet,
+                        snippet:
+                            normalizedMessage.snippet
                     })
                     .onConflictDoUpdate({
                         target: [
                             messages.mailboxId,
-                            messages.providerMessageId,
+                            messages.providerMessageId
                         ],
 
                         set: {
@@ -148,43 +551,78 @@ export async function ingestMailbox(mailBoxId: string, maxMessages: number) {
                             providerThreadId:
                                 normalizedMessage.providerThreadId,
 
-                            subject: normalizedMessage.subject,
+                            subject:
+                                normalizedMessage.subject,
 
-                            sender: normalizedMessage.sender,
+                            sender:
+                                normalizedMessage.sender,
 
                             recipients:
-                                normalizedMessage.recipients.join(", "),
+                                normalizedMessage.recipients.join(
+                                    ', '
+                                ),
 
-                            timestamp: normalizedMessage.timestamp,
+                            timestamp:
+                                normalizedMessage.timestamp,
 
-                            bodyText: normalizedMessage.bodyText,
+                            bodyText:
+                                normalizedMessage.bodyText,
 
-                            bodyHtml: normalizedMessage.bodyHtml,
+                            bodyHtml:
+                                normalizedMessage.bodyHtml,
 
                             labels:
-                                normalizedMessage.labels?.join(", "),
+                                normalizedMessage.labels?.join(
+                                    ', '
+                                ),
 
-                            snippet: normalizedMessage.snippet,
+                            snippet:
+                                normalizedMessage.snippet,
 
-                            updatedAt: new Date(),
-                        },
+                            updatedAt: new Date()
+                        }
                     });
 
                 console.log(
-                    `Saved message: ${normalizedMessage.providerMessageId}`
+                    `Updated message: ${normalizedMessage.providerMessageId}`
                 );
 
             } catch (error) {
                 console.error(
-                    `Failed to process Gmail message`,
+                    'Failed to process changed Gmail message',
                     error
                 );
 
-                // Important:
-                // One malformed message should not
-                // stop the entire ingestion.
                 continue;
             }
         }
     }
+
+    /*
+     * ============================================================
+     * SAVE NEW HISTORY ID
+     * ============================================================
+     */
+
+    const newHistoryId =
+        latestHistoryId ?? currentHistoryId;
+
+    if (newHistoryId) {
+        await db
+            .update(mailboxes)
+            .set({
+                historyId: newHistoryId,
+                syncStatus: 'completed',
+                updatedAt: new Date()
+            })
+            .where(eq(mailboxes.id, mailBoxId));
+
+        console.log(
+            `Incremental sync completed. Saved historyId: ${newHistoryId}`
+        );
+    }
+
+    console.log(
+        `Mailbox ${mailBoxId} synchronization completed successfully.`
+    );
 }

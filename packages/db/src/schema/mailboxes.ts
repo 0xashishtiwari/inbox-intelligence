@@ -15,6 +15,8 @@ export const mailboxes = pgTable("mailboxes", {
 
     syncStatus: text("sync_status").notNull().default("pending"),
 
+    historyId: text("history_id"),
+
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
