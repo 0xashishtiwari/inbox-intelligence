@@ -9,6 +9,7 @@
     "test-job": "tsx src/test-job.ts"
   },
   "dependencies": {
+    "@types/node": "26.3.0",
     "bullmq": "6.3.4"
   },
   "devDependencies": {

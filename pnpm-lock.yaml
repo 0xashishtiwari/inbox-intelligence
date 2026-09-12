@@ -26,6 +26,9 @@ importers:
       '@repo/gmail':
         specifier: workspace:*
         version: link:../../packages/gmail
+      '@repo/queue':
+        specifier: workspace:*
+        version: link:../../packages/queue
       cookie-parser:
         specifier: ^1.4.7
         version: 1.4.7
@@ -239,6 +242,9 @@ importers:
 
   packages/queue:
     dependencies:
+      '@types/node':
+        specifier: 26.3.0
+        version: 26.3.0
       bullmq:
         specifier: 6.3.4
         version: 6.3.4(ioredis@6.0.0(supports-color@7.2.0))(pg@8.23.0)

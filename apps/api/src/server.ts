@@ -10,6 +10,7 @@ import { errorHandler } from "./middleware/error.middleware.js";
 import { logger } from "./config/logger.js";
 import gmailRouter from "./routes/gmail.routes.js";
 import searchRouter from "./routes/search.routes.js";
+import syncRouter from "./routes/sync.routes.js";
 
 const app = express(); 
 
@@ -40,7 +41,7 @@ app.get('/health', async (req, res) => {
 app.use("/api", meRoutes);
 app.use("/api", gmailRouter);
 app.use("/api", searchRouter);
-
+app.use("/api", syncRouter);
 app.use("/auth", authRouter);
 
 app.get("/health", (req, res) => {
