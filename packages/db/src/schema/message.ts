@@ -12,7 +12,6 @@ export const messages = pgTable("messages", {
 
     providerMessageId: text("provider_message_id").notNull(),
 
-
     providerThreadId: text("provider_thread_id").notNull(),
 
     subject: text("subject"),
@@ -22,7 +21,6 @@ export const messages = pgTable("messages", {
     recipients: text("recipients").notNull(),
 
     timestamp: timestamp("timestamp", { withTimezone: true }).notNull(),
-
 
     bodyText: text("body_text"),
 
