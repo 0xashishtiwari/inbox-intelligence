@@ -1,0 +1,1 @@
+ALTER TABLE "messages" ADD COLUMN "indexed_at" timestamp with time zone;

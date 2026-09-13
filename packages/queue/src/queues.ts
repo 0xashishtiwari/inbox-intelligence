@@ -7,3 +7,11 @@ export const gmailIngestionQueue = new Queue('gmail-ingestion', {
     connection: redisConnection
 
 });
+
+export const indexingQueue = new Queue(
+    "indexing",
+    {
+        connection: redisConnection
+        },
+
+);
