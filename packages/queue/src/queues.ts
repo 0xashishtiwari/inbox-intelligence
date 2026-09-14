@@ -12,6 +12,13 @@ export const indexingQueue = new Queue(
     "indexing",
     {
         connection: redisConnection
-        },
+    },
 
+);
+
+export const embeddingQueue = new Queue(
+    "embedding",
+    {
+        connection: redisConnection
+    }
 );

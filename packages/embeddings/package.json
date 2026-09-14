@@ -1,0 +1,22 @@
+{
+  "name": "@repo/embeddings",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+   "scripts": {
+    "test:embedding": "tsx --env-file=../../.env src/test.ts"
+  },
+  "keywords": [],
+  "author": "Ashish Tiwari <ashishinrewa@gmail.com>",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@google/genai": "^2.22.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.13"
+  }
+}

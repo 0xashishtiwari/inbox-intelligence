@@ -3,5 +3,7 @@ packages:
   - "workers/*"
   - "packages/*"
 allowBuilds:
+  '@google/genai': false
   esbuild: false
   msgpackr-extract: true
+  protobufjs: false

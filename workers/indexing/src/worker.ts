@@ -1,8 +1,9 @@
 import { Worker } from "bullmq";
-import { db, messages } from "@repo/db";
-import { isNull } from "drizzle-orm";
+import { db, messages, chunks } from "@repo/db";
+import { isNull , inArray } from "drizzle-orm";
 import { indexMessages } from "@repo/retrieval";
-import { indexingQueue } from "@repo/queue";
+import { indexingQueue , embeddingQueue } from "@repo/queue";
+
 
 const BATCH_SIZE = 100;
 
@@ -50,7 +51,48 @@ export const indexingWorker = new Worker(
             `[INDEXING] Created ${result.chunksCreated} chunks`
         );
 
-        return result;
+  // Find chunks created for these messages
+        const createdChunks = await db
+            .select({
+                id: chunks.id,
+            })
+            .from(chunks)
+            .where(inArray(chunks.messageId, messageIds));
+
+        console.log(
+            `[EMBEDDING] Found ${createdChunks.length} chunks`
+        );
+
+        // Add embedding jobs
+        if (createdChunks.length > 0) {
+            await embeddingQueue.addBulk(
+                createdChunks.map((chunk) => ({
+                    name: "generate-embedding",
+                    data: {
+                        chunkId: chunk.id,
+                    },
+                    opts: {
+                        jobId: `embedding-${chunk.id}`,
+                        attempts: 5,
+                        backoff: {
+                            type: "exponential" as const,
+                            delay: 2000,
+                        },
+                        removeOnComplete: true,
+                        removeOnFail: false,
+                    },
+                }))
+            );
+
+            console.log(
+                `[EMBEDDING] Queued ${createdChunks.length} embedding jobs`
+            );
+        }
+
+        return {
+            ...result,
+            embeddingJobsQueued: createdChunks.length,
+        };
     },
     {
         // Reuse the same Redis connection configured in your queue

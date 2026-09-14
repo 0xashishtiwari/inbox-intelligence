@@ -1,0 +1,2 @@
+import './embedding.worker.js'
+
